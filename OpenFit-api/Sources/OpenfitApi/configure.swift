@@ -26,7 +26,7 @@ func configure(_ app: Application) async throws {
         jwtSecret = "secret-de-test-uniquement"
     } else {
         guard let secret = Environment.get("JWT_SECRET"), !secret.isEmpty else {
-            fatalError("JWT_SECRET manquant dans le .env")
+            fatalError("JWT_SECRET missing in .env")
         }
         jwtSecret = secret
     }
