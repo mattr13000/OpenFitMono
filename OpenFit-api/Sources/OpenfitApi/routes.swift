@@ -7,4 +7,6 @@ func routes(_ app: Application) throws {
     api.get("health") { req async -> String in
         "OK"
     }
+
+    try api.register(collection: AuthController())
 }

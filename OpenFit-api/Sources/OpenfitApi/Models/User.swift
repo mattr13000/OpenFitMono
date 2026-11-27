@@ -7,6 +7,7 @@
 
 import Fluent
 import Foundation
+import Vapor
 
 final class User: Model, @unchecked Sendable {
     static let schema = "users"
@@ -48,5 +49,19 @@ final class User: Model, @unchecked Sendable {
         self.passwordHash = passwordHash
         self.registeredAt = registeredAt
         self.updatedAt = updatedAt
+    }
+}
+
+extension User: Authenticatable {}
+
+extension User {
+    func toDTO() throws -> UserDTO {
+        UserDTO(
+            userId: try requireID(),
+            lastName: lastName,
+            firstName: firstName,
+            email: email,
+            registeredAt: registeredAt
+        )
     }
 }

@@ -46,7 +46,7 @@ struct SeedCommand: AsyncCommand {
         try await insertActivities(types: activities.types, users: users, days: days, on: database)
         try await insertGoals(categories: activities.categories, users: users, days: days, on: database)
 
-        context.console.success("Success : \(users.count) users, \(foods.count) aliments, \(mealCount) repas, \(SeedData.activities.count) activités, \(SeedData.goals.count) objectifs")
+        context.console.success("Success : \(users.count) users, \(foods.count) foods, \(mealCount) meals, \(SeedData.activities.count) activities, \(SeedData.goals.count) goals")
         context.console.info("Login: lea.martin@example.com / \(SeedData.password)")
     }
 }
@@ -58,9 +58,17 @@ private struct SeedDays {
 
     init(now: Date) {
         var paris = Calendar(identifier: .gregorian)
-        paris.timeZone = TimeZone(identifier: "Europe/Paris") ?? .gmt
+        if #available(iOS 16, *) {
+            paris.timeZone = TimeZone(identifier: "Europe/Paris") ?? .gmt
+        } else {
+            // Fallback on earlier versions
+        }
         var utc = Calendar(identifier: .gregorian)
-        utc.timeZone = .gmt
+        if #available(iOS 16, *) {
+            utc.timeZone = .gmt
+        } else {
+            // Fallback on earlier versions
+        }
         self.paris = paris
         self.utc = utc
         self.today = paris.startOfDay(for: now)
@@ -69,7 +77,7 @@ private struct SeedDays {
     func dateTime(_ moment: (daysAgo: Int, hour: Int, minute: Int)) throws -> Date {
         guard let day = paris.date(byAdding: .day, value: -moment.daysAgo, to: today),
               let date = paris.date(bySettingHour: moment.hour, minute: moment.minute, second: 0, of: day) else {
-            throw Abort(.internalServerError, reason: "Date de seed invalide")
+            throw Abort(.internalServerError, reason: "Invalid seed date")
         }
         return date
     }
@@ -77,14 +85,14 @@ private struct SeedDays {
     // DATE columns: midnight UTC of the Paris calendar day.
     func day(daysAgo: Int) throws -> Date {
         guard let day = paris.date(byAdding: .day, value: -daysAgo, to: today) else {
-            throw Abort(.internalServerError, reason: "Date de seed invalide")
+            throw Abort(.internalServerError, reason: "Invalid seed date")
         }
         return try self.day(paris.dateComponents([.year, .month, .day], from: day))
     }
 
     func day(_ components: DateComponents) throws -> Date {
         guard let date = utc.date(from: components) else {
-            throw Abort(.internalServerError, reason: "Date de seed invalide")
+            throw Abort(.internalServerError, reason: "Invalid seed date")
         }
         return date
     }
@@ -93,7 +101,7 @@ private struct SeedDays {
 private extension SeedCommand {
     func id(_ key: String, in ids: [String: UUID]) throws -> UUID {
         guard let id = ids[key] else {
-            throw Abort(.internalServerError, reason: "Donnée de seed introuvable : \(key)")
+            throw Abort(.internalServerError, reason: "Seed data not found: \(key)")
         }
         return id
     }
@@ -214,7 +222,7 @@ private extension SeedCommand {
 
             for item in template.items {
                 guard let food = foods[item.food] else {
-                    throw Abort(.internalServerError, reason: "Aliment de seed introuvable : \(item.food)")
+                    throw Abort(.internalServerError, reason: "Seed food not found: \(item.food)")
                 }
                 let grams: Double
                 switch item.unit {
@@ -222,7 +230,7 @@ private extension SeedCommand {
                     grams = item.quantity
                 case .serving:
                     guard let servingWeight = food.servingWeightG else {
-                        throw Abort(.internalServerError, reason: "« \(food.name) » n'a pas de portion")
+                        throw Abort(.internalServerError, reason: "\(food.name) has no serving size")
                     }
                     grams = item.quantity * servingWeight
                 }
